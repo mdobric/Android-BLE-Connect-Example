@@ -22,6 +22,7 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -65,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
             "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
             "com.example.bluetooth.le.EXTRA_DATA";
+    public final static UUID DEHU_SERVICE_UUID = UUID.fromString("1efbd3de-eed9-4092-9afc-664d6507d6e1");
+    public final static UUID UNLOCK_CHARACTERISTIC_UUID = UUID.fromString("a7d004b3-1781-49e3-b8ce-ea482c20dfbd");
+
 
     public Map<String, String> uuids = new HashMap<String, String>();
 
@@ -166,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
             // this will get called anytime you perform a read or write characteristic operation
+            Log.e("MDO", "onCharacteristicChanged - characteristic = " + characteristic);
             MainActivity.this.runOnUiThread(new Runnable() {
                 public void run() {
                     peripheralTextView.append("device read or wrote to\n");
@@ -195,7 +201,6 @@ public class MainActivity extends AppCompatActivity {
                             disconnectDevice.setVisibility(View.VISIBLE);
                         }
                     });
-
                     // discover services and characteristics for this device
                     bluetoothGatt.discoverServices();
 
@@ -213,11 +218,22 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
             // this will get called after the client initiates a 			BluetoothGatt.discoverServices() call
+            Log.e("MDO", "onServicesDiscovered called");
             MainActivity.this.runOnUiThread(new Runnable() {
                 public void run() {
                     peripheralTextView.append("device services have been discovered\n");
                 }
             });
+            try {
+                Log.e("MDO", "write unlock characteristic immediately after discovering services");
+                BluetoothGattService service = bluetoothGatt.getService(DEHU_SERVICE_UUID);
+                BluetoothGattCharacteristic unlock_characteristic = service.getCharacteristic(UNLOCK_CHARACTERISTIC_UUID);
+                unlock_characteristic.setValue(new byte[]{3, 4, 5, 6});
+                bluetoothGatt.writeCharacteristic(unlock_characteristic);
+            }
+            catch (Exception e){
+                Log.e("MDO", "exception = " + e);
+            }
             displayGattServices(bluetoothGatt.getServices());
         }
 
